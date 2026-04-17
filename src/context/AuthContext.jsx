@@ -1,63 +1,55 @@
-import React, { createContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { createContext, useMemo, useState } from 'react';
 
 export const AuthContext = createContext();
 
-axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const defaultUser = {
+  name: 'Guest Student',
+  email: 'guest@eduai.local',
+  profile: {
+    cgpa: '8.2',
+    graduationYear: '2026',
+    targetDegree: 'MS in Computer Science',
+    preferredCountry: 'USA',
+    budget: '4000000',
+    greScore: '318',
+    readiness: 72
+  }
+};
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token') || null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(defaultUser);
 
-  useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      fetchUser();
-    } else {
-      setLoading(false);
-    }
-  }, [token]);
+  const updateProfile = async (profileUpdates) => {
+    setUser((currentUser) => {
+      const nextProfile = {
+        ...currentUser.profile,
+        ...profileUpdates
+      };
+      const profileFields = ['cgpa', 'graduationYear', 'targetDegree', 'preferredCountry', 'budget', 'greScore'];
+      const filledFields = profileFields.filter((field) => String(nextProfile[field] || '').trim()).length;
 
-  const fetchUser = async () => {
-    try {
-      const res = await axios.get('/auth/me');
-      setUser(res.data.data);
-    } catch (err) {
-      console.error(err);
-      logout();
-    } finally {
-      setLoading(false);
-    }
+      return {
+        ...currentUser,
+        profile: {
+          ...nextProfile,
+          readiness: Math.max(20, Math.min(100, Math.round((filledFields / profileFields.length) * 100)))
+        }
+      };
+    });
   };
 
-  const login = async (email, password) => {
-    const res = await axios.post('/auth/login', { email, password });
-    localStorage.setItem('token', res.data.token);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
-    setToken(res.data.token);
-    setUser(res.data.user);
-    return res.data;
-  };
-
-  const register = async (name, email, password) => {
-    const res = await axios.post('/auth/register', { name, email, password });
-    localStorage.setItem('token', res.data.token);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
-    setToken(res.data.token);
-    setUser(res.data.user);
-    return res.data;
-  };
-
-  const logout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
-    setUser(null);
-    delete axios.defaults.headers.common['Authorization'];
-  };
+  const value = useMemo(() => ({
+    user,
+    token: null,
+    loading: false,
+    login: async () => ({ user }),
+    register: async () => ({ user }),
+    logout: () => {},
+    updateProfile
+  }), [user]);
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

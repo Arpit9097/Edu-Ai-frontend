@@ -1,9 +1,8 @@
 import React, { useState, useContext, useEffect } from 'react';
-import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 
 const Profile = () => {
-  const { user } = useContext(AuthContext);
+  const { user, updateProfile } = useContext(AuthContext);
   const [formData, setFormData] = useState({
     cgpa: '',
     graduationYear: '',
@@ -33,8 +32,8 @@ const Profile = () => {
 
   const handleSave = async () => {
     try {
-      await axios.put('/users/profile', formData);
-      setMsg('Profile saved successfully! Refresh Dashboard to see updated readiness.');
+      await updateProfile(formData);
+      setMsg('Profile saved successfully.');
       setTimeout(() => setMsg(''), 3000);
     } catch (err) {
       setMsg('Failed to save profile');
