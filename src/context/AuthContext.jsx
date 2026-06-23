@@ -2,6 +2,8 @@ import React, { createContext, useMemo, useState, useEffect } from 'react';
 
 export const AuthContext = createContext();
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const defaultUser = {
   name: 'Guest Student',
   email: 'guest@eduai.local',
@@ -30,7 +32,7 @@ export const AuthProvider = ({ children }) => {
       if (storedToken && storedUser) {
         try {
           const parsedUser = JSON.parse(storedUser);
-          const profileRes = await fetch('http://localhost:8000/api/profile/', {
+          const profileRes = await fetch(`${API_BASE_URL}/api/profile/`, {
             headers: { 'Authorization': `Bearer ${storedToken}` }
           });
           if (profileRes.ok) {
@@ -53,7 +55,7 @@ export const AuthProvider = ({ children }) => {
 
       // Guest fallback
       try {
-        let loginRes = await fetch('http://localhost:8000/api/auth/login/', {
+        let loginRes = await fetch(`${API_BASE_URL}/api/auth/login/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -63,7 +65,7 @@ export const AuthProvider = ({ children }) => {
         });
 
         if (loginRes.status === 400 || loginRes.status === 401) {
-          const registerRes = await fetch('http://localhost:8000/api/auth/register/', {
+          const registerRes = await fetch(`${API_BASE_URL}/api/auth/register/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -75,7 +77,7 @@ export const AuthProvider = ({ children }) => {
           });
 
           if (registerRes.ok) {
-            loginRes = await fetch('http://localhost:8000/api/auth/login/', {
+            loginRes = await fetch(`${API_BASE_URL}/api/auth/login/`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -108,7 +110,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/auth/login/', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/login/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -118,7 +120,7 @@ export const AuthProvider = ({ children }) => {
         setToken(data.access);
 
         // Fetch User profile data
-        const profileRes = await fetch('http://localhost:8000/api/profile/', {
+        const profileRes = await fetch(`${API_BASE_URL}/api/profile/`, {
           headers: { 'Authorization': `Bearer ${data.access}` }
         });
         const profileData = await profileRes.json();
@@ -154,7 +156,7 @@ export const AuthProvider = ({ children }) => {
       const first_name = name.split(' ')[0] || '';
       const last_name = name.split(' ')[1] || '';
 
-      const res = await fetch('http://localhost:8000/api/auth/register/', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/register/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -193,7 +195,7 @@ export const AuthProvider = ({ children }) => {
   const updateProfile = async (profileUpdates) => {
     if (token) {
       try {
-        const res = await fetch('http://localhost:8000/api/profile/', {
+        const res = await fetch(`${API_BASE_URL}/api/profile/`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',

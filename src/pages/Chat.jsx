@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const Chat = () => {
   const { user, token } = useContext(AuthContext);
   const [messages, setMessages] = useState([]);
@@ -16,7 +18,7 @@ const Chat = () => {
   // Load chat session history from backend on mount/token change
   useEffect(() => {
     if (token) {
-      fetch('http://localhost:8000/api/chat/history/', {
+      fetch(`${API_BASE_URL}/api/chat/history/`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -69,7 +71,7 @@ const Chat = () => {
     setLoading(true);
     
     try {
-      const response = await fetch('http://localhost:8000/api/chat/', {
+      const response = await fetch(`${API_BASE_URL}/api/chat/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
