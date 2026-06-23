@@ -2,6 +2,20 @@ import React, { useState, useRef, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { API_BASE_URL } from '../config';
 
+const readApiResponse = async (response) => {
+  const text = await response.text();
+
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: text };
+  }
+};
+
 const Chat = () => {
   const { user, token } = useContext(AuthContext);
   const [messages, setMessages] = useState([]);
@@ -17,6 +31,14 @@ const Chat = () => {
   // Load chat session history from backend on mount/token change
   useEffect(() => {
     if (token) {
+      if (!API_BASE_URL) {
+        console.error('[Chat] Cannot load history because VITE_API_URL resolved to an empty API_BASE_URL.');
+        setMessages([
+          { role: 'ai', text: 'Chat is not configured: VITE_API_URL is missing. Set it to your backend URL and restart/rebuild the frontend.' }
+        ]);
+        return;
+      }
+
       const historyUrl = `${API_BASE_URL}/api/chat/history/`;
       console.log('[Chat] Final history request URL:', historyUrl);
 
@@ -25,7 +47,15 @@ const Chat = () => {
           'Authorization': `Bearer ${token}`
         }
       })
-      .then(res => res.json())
+      .then(async res => {
+        const data = await readApiResponse(res);
+
+        if (!res.ok) {
+          throw new Error(data?.detail || data?.error || `History request failed with status ${res.status}`);
+        }
+
+        return data;
+      })
       .then(data => {
         if (data && data.length > 0) {
           // Use the most recent session
@@ -73,6 +103,10 @@ const Chat = () => {
     setLoading(true);
     
     try {
+      if (!API_BASE_URL) {
+        throw new Error('VITE_API_URL is missing. Set it to your backend URL and restart/rebuild the frontend.');
+      }
+
       const chatUrl = `${API_BASE_URL}/api/chat/`;
       console.log('[Chat] Final chat request URL:', chatUrl);
 
@@ -88,18 +122,23 @@ const Chat = () => {
         })
       });
       
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (response.ok) {
         if (data.session_id) {
           setSessionId(data.session_id);
         }
         setMessages(prev => [...prev, { role: 'ai', text: data.reply }]);
       } else {
-        setMessages(prev => [...prev, { role: 'ai', text: `Error: ${data.error || 'Failed to get response'}` }]);
+        console.error('[Chat] Chat API error:', {
+          url: chatUrl,
+          status: response.status,
+          response: data
+        });
+        setMessages(prev => [...prev, { role: 'ai', text: `Error: ${data?.detail || data?.error || `Chat request failed with status ${response.status}`}` }]);
       }
     } catch (err) {
       console.error("Chat communication error:", err);
-      setMessages(prev => [...prev, { role: 'ai', text: "Error: Could not connect to backend server." }]);
+      setMessages(prev => [...prev, { role: 'ai', text: `Error: ${err.message || 'Could not connect to backend server.'}` }]);
     } finally {
       setLoading(false);
     }
